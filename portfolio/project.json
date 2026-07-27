@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "slug": "healthcare-appointment-capacity-forecasting",
+  "title": "Healthcare - Appointment Demand, No-Show, and Capacity Forecasting",
+  "status": "draft",
+  "source": {
+    "dataBoundary": "Synthea or public aggregate operations data; no PHI and no clinical recommendations."
+  },
+  "evidence": []
+}
