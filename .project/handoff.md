@@ -11,6 +11,16 @@
 - The product uses a checksum-verified NHS GPAD national aggregate fixture;
   contains no PHI and treats capacity only as a user-supplied hypothetical
   scenario.
+- `portfolio/project.json` is ready for portfolio ingestion and supplies the
+  public URL, release metadata, data boundary, and evidence paths.
+
+## GitHub handoff
+
+The local release history is clean on `feat/gpad-capacity-scenario`. This
+checkout has no configured `origin` remote, and the local GitHub CLI token was
+invalid when checked on 2026-07-31. Attach the intended remote and
+reauthenticate before pushing or opening a pull request; no unauthenticated
+GitHub operation was attempted.
 
 ## Verification
 
