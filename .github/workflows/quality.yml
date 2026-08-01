@@ -9,3 +9,5 @@ jobs:
         with:
           python-version: '3.11'
       - run: python3 scripts/project_kit.py check
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m unittest discover -s tests -v

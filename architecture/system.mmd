@@ -1,5 +1,10 @@
 flowchart LR
-  A[Representative data] --> B[Validate and prepare]
-  B --> C[Healthcare - Appointment Demand, No-Show, and Capacity Forecasting]
-  C --> D[Decision-focused output]
-  C --> E[Evaluation evidence]
+  A["Versioned representative data\nSynthea or public aggregate only"] --> B["Validate source and schema\nIdempotent Python loader"]
+  B --> C[("DuckDB\nraw and curated tables")]
+  C --> D["SQL + Python transforms\nDemand and no-show baselines"]
+  D --> E["Versioned evaluation report\nquality, calibration, latency, freshness, cost"]
+  D --> F["Local Streamlit or CLI\ncapacity-planning output"]
+  G["Tests and source manifest"] --> B
+  G --> D
+  H["Human-approved escalation only\nDocker, hosting, or cloud"] -.-> C
+  H -.-> F

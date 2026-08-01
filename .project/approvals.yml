@@ -1,4 +1,5 @@
 version: 1
-architecture: pending
-cloud: not-requested
-publication: not-requested
+architecture: approved-2026-07-26
+cloud: aws-public-free-tier-approved-pending-service-selection-2026-07-31
+publication: public-approved-pending-deployment-verification-2026-07-31
+data_source: nhs-gpad-april-2026-public-aggregate-approved-2026-07-31
