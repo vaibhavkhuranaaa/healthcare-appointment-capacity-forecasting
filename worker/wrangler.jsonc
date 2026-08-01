@@ -1,0 +1,7 @@
+{
+  "name": "healthcare-appointment-capacity-forecasting",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-31",
+  "assets": { "directory": "../dashboard", "binding": "ASSETS" },
+  "observability": { "enabled": false }
+}

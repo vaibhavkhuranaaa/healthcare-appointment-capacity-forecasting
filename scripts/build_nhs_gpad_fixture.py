@@ -6,6 +6,7 @@ import argparse
 import csv
 import hashlib
 import io
+import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -26,7 +27,7 @@ def _parse_date(value: str) -> date:
     return datetime.strptime(value.title(), "%d%b%Y").date()
 
 
-def build(archive: Path, output_directory: Path) -> None:
+def build(archive: Path, output_directory: Path, dashboard_data: Path) -> None:
     totals: dict[date, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     with ZipFile(archive) as source_zip:
         if set(MEMBERS).difference(source_zip.namelist()):
@@ -97,14 +98,32 @@ def build(archive: Path, output_directory: Path) -> None:
         ),
         encoding="utf-8",
     )
+    dashboard_data.parent.mkdir(parents=True, exist_ok=True)
+    dashboard_data.write_text(
+        json.dumps(
+            [
+                {
+                    "service_date": day.isoformat(),
+                    "recorded_appointments": sum(totals[day].values()),
+                    "attended_appointments": totals[day]["Attended"],
+                    "dna_appointments": totals[day]["DNA"],
+                    "unknown_status_appointments": totals[day]["Unknown"],
+                }
+                for day in days
+            ],
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
     parser.add_argument("--output", type=Path, default=Path("data/nhs-gpad/apr-2026-national-daily-v1"))
+    parser.add_argument("--dashboard-data", type=Path, default=Path("dashboard/gpad-data.json"))
     args = parser.parse_args()
-    build(args.archive, args.output)
+    build(args.archive, args.output, args.dashboard_data)
     print(f"STATUS: SUCCESS\nFixture: {args.output}")
     return 0
 

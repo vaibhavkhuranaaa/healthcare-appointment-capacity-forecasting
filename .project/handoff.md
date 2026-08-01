@@ -30,21 +30,17 @@ dashboard preview, M4 deployment decision, and M5 verified publication; see
 
 ## Human-approved hosting direction
 
-- Provider: AWS.
-- Visibility: public.
-- Cost boundary: free tier only.
+- Provider: Cloudflare Workers Free.
+- Visibility: public `workers.dev` URL.
+- Cost boundary: fail-closed Free-plan quota behavior; no paid plan or add-ons.
 - Failed verification: retain resources; do **not** delete automatically yet.
 - These approvals are recorded in `.project/approvals.yml`.
 
 ## Current blocker
 
-The human selected a **public interactive hosted application** on 2026-07-31.
-AWS CLI v2.36.14 is installed and the read-only identity check verified account
-`074642416888` in `us-east-2`. No AWS resource, deployment, or public URL
-exists. The proposed S3 + CloudFront browser-only application plan in
-`docs/deployment-decision.md` contains the current Cloudflare Workers Free
-dynamic-runtime proposal, which needs explicit exact-plan approval before any
-Cloudflare account or resource is created.
+The human approved Cloudflare Workers Free on 2026-07-31 for the dynamic public
+application. No Cloudflare resource, deployment, or public URL exists yet.
+The next gate is a read-only authenticated Cloudflare context check.
 
 ## Next-chat checklist
 
