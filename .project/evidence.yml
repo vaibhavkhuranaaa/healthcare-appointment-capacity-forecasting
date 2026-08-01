@@ -35,6 +35,11 @@ evidence:
     kind: browser-verified-dashboard
     path: dashboard/index.html
     claim: The local dashboard loaded without an error overlay and updated the capacity scenario result in browser verification on 2026-07-31.
+  - id: cloudflare-workers-deployment-v1
+    status: verified
+    kind: public-deployment
+    path: docs/deployment-evidence.md
+    claim: Cloudflare Worker version cbb4d4d9-2ca6-444d-9301-639c6a3fc5cf publicly serves the GPAD dashboard and records deployed source SHA 6e8f390.
   - id: deployment-decision-v1
     status: verified
     kind: deployment-decision

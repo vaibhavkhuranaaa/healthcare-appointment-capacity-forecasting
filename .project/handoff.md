@@ -1,62 +1,20 @@
-# New-chat handoff
+# Verified public-release handoff
 
-## Project status
+## Current status
 
-- M1–M3 are complete as retained synthetic historical evidence. R1–R2 replace
-  the active local source and workflow with a public NHS GPAD national daily
-  aggregate fixture and a user-supplied hypothetical capacity scenario.
-- The current local evaluation is in `evaluation/report.md`; it reports the
-  GPAD fixture window, demand WAPE, DNA-rate benchmark, latency, $0 direct
-  local cost, and explicit limitations.
-- No cloud resource, hosted URL, public release, Git commit for this work, or
-  Git remote has been created.
-- The human approved use of NHS England's free GP Appointments Data (GPAD).
-  The April 2026 daily-count archive was downloaded and inspected: its
-  March–April 2026 data has 61 contiguous aggregate days, with `Attended`,
-  `DNA`, and `Unknown` appointment-status counts. It contains no patient
-  identifiable information according to the publisher.
+- M1–M5 and R1–R3 are complete.
+- Public URL: `https://healthcare-appointment-capacity-forecasting.vaibhavkhurana.workers.dev`.
+- Provider: Cloudflare Workers Free, public `workers.dev` URL, no persistence,
+  no paid plan, and fail-closed free-tier behavior.
+- Deployed Worker version: `cbb4d4d9-2ca6-444d-9301-639c6a3fc5cf`.
+- Deployed source SHA: `6e8f390`; see `docs/deployment-evidence.md`.
+- The product uses a checksum-verified NHS GPAD national aggregate fixture;
+  contains no PHI and treats capacity only as a user-supplied hypothetical
+  scenario.
 
-## Data transition constraint and approved redesign
+## Verification
 
-GPAD does not publish reliable available-appointment counts, and its `Unknown`
-status is not a cancellation. Rebuild the local contract around recorded,
-attended, DNA, and unknown counts; make capacity a clearly labelled user-supplied
-scenario input. Do not map unknown to cancelled or present inferred capacity as
-observed capacity. The existing synthetic fixture and evaluation must remain
-labelled synthetic until that rebuild is verified. The approved sequence is
-R1 public-data rebaseline, R2 workflow and evaluation rebuild, R3 local
-dashboard preview, M4 deployment decision, and M5 verified publication; see
-`docs/redesign-plan.md`. R1–R3 are complete; M4 is the active milestone.
-
-## Human-approved hosting direction
-
-- Provider: Cloudflare Workers Free.
-- Visibility: public `workers.dev` URL.
-- Cost boundary: fail-closed Free-plan quota behavior; no paid plan or add-ons.
-- Failed verification: retain resources; do **not** delete automatically yet.
-- These approvals are recorded in `.project/approvals.yml`.
-
-## Current blocker
-
-The human approved Cloudflare Workers Free on 2026-07-31 for the dynamic public
-application. No Cloudflare resource, deployment, or public URL exists yet.
-The next gate is a read-only authenticated Cloudflare context check.
-
-## Next-chat checklist
-
-1. Obtain exact human approval for Cloudflare Workers Free: public `workers.dev`
-   URL, fail-closed quota behavior, and retain-on-failure recovery policy.
-2. Verify the authenticated Cloudflare deployment context read-only before any
-   provisioning or publication.
-3. Obtain human approval for the exact Cloudflare Workers Free dynamic-runtime
-   plan only after R3; then record the provider change in `.project/approvals.yml`.
-4. Commit the verified local work with a conventional commit to obtain the
-   exact source SHA required for M5. Do not add AI/model attribution.
-5. Provision, deploy, and verify only after the exact service plan is
-   documented. Verify the deployed revision against that source SHA before
-   marking M5 complete.
-
-## Useful local commands
+Run the local suite with:
 
 ```sh
 uv run --with-requirements requirements.txt python -m unittest discover -s tests -v
@@ -64,8 +22,12 @@ uv run --with-requirements requirements.txt python -m src.capacity_forecasting.e
 python3 scripts/project_kit.py check
 ```
 
+Live verification must confirm that the dashboard loads, `POST /api/forecast`
+accepts a positive integer capacity, invalid capacity returns a safe HTTP 400,
+and the Cloudflare version annotation still names the intended source SHA.
+
 ## Recovery
 
-The local workflow creates only `build/capacity_forecasting.duckdb`. Delete
-that file to return to source-only local state. No external resource exists to
-remove.
+If a later verification fails, retain the Worker and its deployed versions,
+stop release activity, record the failure, and await human direction. Do not
+delete or automatically roll back the resource.

@@ -51,14 +51,13 @@ resource exists yet. M4 is reopened to select the smallest service that matches
 the chosen static or interactive public experience; see
 `docs/deployment-decision.md` and `.project/handoff.md`.
 
-The human rejected a browser-only interactive application on 2026-07-31. The
-current proposed deployment is one Cloudflare Workers Free runtime with a
-public `workers.dev` URL: it serves dashboard assets and performs the
-deterministic baseline calculation for numeric scenario inputs. The Worker has
-no storage, external fetch, database, or clinical data; it bundles only the
-approved synthetic fixture. AWS authentication remains verified read-only, but
-the Cloudflare runtime plan still awaits exact human approval and no cloud
-resource exists.
+The human selected a dynamic Cloudflare Workers Free runtime on 2026-07-31.
+The verified public `workers.dev` deployment serves dashboard assets and a
+same-origin deterministic forecast API for numeric scenario inputs. The Worker
+has no storage, external fetch, database, or clinical data; it bundles only the
+approved NHS GPAD national aggregate derivative. The deployed version, source
+SHA, cost boundary, and recovery policy are recorded in
+`docs/deployment-evidence.md`.
 
 ## Approved rebaseline sequence
 

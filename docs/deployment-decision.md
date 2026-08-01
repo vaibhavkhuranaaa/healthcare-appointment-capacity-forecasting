@@ -1,6 +1,16 @@
 # Deployment decision
 
-## Decision
+## Current verified deployment
+
+**2026-07-31: Cloudflare Workers Free public deployment verified.** The active
+application is at `https://healthcare-appointment-capacity-forecasting.vaibhavkhurana.workers.dev`.
+It serves the NHS GPAD national aggregate dashboard and a same-origin dynamic
+forecast endpoint with no persistence or external data fetch. The deployed
+Worker version and source SHA evidence are in `docs/deployment-evidence.md`.
+The earlier AWS and static-hosting comparisons below are retained as historical
+decision context, not the active production design.
+
+## Historical local-only decision
 
 **2026-07-26: retain the verified local-only demo.** No provider, cloud
 resource, hosted URL, public exposure, paid capacity, or deployment pipeline is

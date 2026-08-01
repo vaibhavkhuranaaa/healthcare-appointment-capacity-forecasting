@@ -1,6 +1,6 @@
 version: 1
 project: healthcare-appointment-capacity-forecasting
-status: planned
+status: complete
 milestones:
   - id: M1
     title: Define data and baseline
@@ -41,12 +41,12 @@ milestones:
       - A human approves the hosted visual direction before a public build is prepared.
   - id: M4
     title: Decide deployment
-    status: unblocked
+    status: complete
     acceptance:
       - Human approves provider, cost, exposure, and teardown when deployment is useful.
   - id: M5
     title: Verify and publish
-    status: blocked_by_M4
+    status: complete
     acceptance:
       - Deployed revision proves its exact source SHA.
       - Public facts link to verified evidence.
