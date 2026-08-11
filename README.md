@@ -9,7 +9,7 @@ evidence-led delivery plan.
 - Data boundary: Synthea or public aggregate operations data; no PHI and no clinical recommendations.
 - First demo: Planned representative demo; public portfolio case-study target, with interactive hosting only after approval.
 
-Read `AGENTS.md` and `.project/` before contributing.
+Read `PROJECT.md` and `.project/` before contributing.
 
 ## Run the local workflow
 
