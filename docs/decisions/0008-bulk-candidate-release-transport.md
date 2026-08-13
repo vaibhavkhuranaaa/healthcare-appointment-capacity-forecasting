@@ -22,14 +22,16 @@ and a per-object process loop is not operationally credible. Cloudflare recommen
 - Smoke-test by changing `current.json`. Rejected because a failed candidate must not
   alter production selection.
 
-## Not done
+## Outcome
 
-No R2 bucket, candidate Worker, production Worker, object, or pointer was created or
-changed. Candidate upload and both deployments still require explicit approval.
+The first live smoke exposed a missing serving-index contract after the initial tree
+had already passed checksum validation. The immutable tree was not modified. A
+packaging-only successor added the bounded indexes, passed a second exact remote
+checksum comparison, and then moved `candidate.json`. `current.json` remains absent.
 
 ## Changed
 
 The uploader now validates the complete manifest, performs immutable concurrent copy
-and checksum verification through `rclone`, then writes `candidate.json`. Wrangler has
-separate candidate and production pointer configuration, and approval-gated workflows
-deploy and smoke each environment.
+and checksum verification through `rclone`, uses a least-privilege bucket-scoped S3
+path without bucket-creation probes, and writes `candidate.json` only afterward. The
+candidate workflow smokes metadata, geographies, forecasts, and every product route.

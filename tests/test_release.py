@@ -7,6 +7,7 @@ import pytest
 from gp_access_planner.release import (
     _flush_page,
     add_json_artifact,
+    clone_release,
     partition_key,
     promote_release,
     public_row,
@@ -75,6 +76,32 @@ def test_manifest_artifacts_can_be_updated_as_one_batch(tmp_path: Path) -> None:
     }
 
 
+def test_clone_release_rekeys_manifest_without_mutating_source(tmp_path: Path) -> None:
+    source = tmp_path / "releases" / "release-a"
+    artifact = source / "forecasts" / "00A.json.gz"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_bytes(b"forecast")
+    (source / "manifest.json").write_text(
+        json.dumps(
+            {
+                "release_id": "release-a",
+                "artifact_count": 1,
+                "artifacts": ["releases/release-a/forecasts/00A.json.gz"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    target = clone_release(tmp_path, "release-a", "release-b")
+
+    cloned = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
+    original = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
+    assert cloned["release_id"] == "release-b"
+    assert cloned["artifacts"] == ["releases/release-b/forecasts/00A.json.gz"]
+    assert original["release_id"] == "release-a"
+    assert (target / "forecasts" / "00A.json.gz").samefile(artifact)
+
+
 def test_exactly_full_final_page_has_no_phantom_cursor(tmp_path: Path) -> None:
     target = _flush_page(
         tmp_path,
@@ -119,4 +146,4 @@ def test_bulk_upload_verifies_immutable_release_before_candidate_pointer(tmp_pat
     assert validate_release(release) == "release-a"
     upload_release(release, "r2:planner", run=run)
     assert [command[1] for command in commands] == ["copy", "check", "copyto"]
-    assert commands[-1][-1] == "r2:planner/candidate.json"
+    assert commands[-1][-2:] == ["r2:planner/candidate.json", "--s3-no-check-bucket"]

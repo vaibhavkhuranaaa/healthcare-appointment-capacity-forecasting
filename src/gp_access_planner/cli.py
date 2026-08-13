@@ -10,7 +10,7 @@ import psycopg
 from .contracts import load_manifest, verify_artifact
 from .evaluation import evaluate_database, materialize_approved_forecasts
 from .ingest import ingest_bundle
-from .release import export_release, promote_release
+from .release import clone_release, export_release, materialize_serving_metadata, promote_release
 
 
 def parser() -> argparse.ArgumentParser:
@@ -43,6 +43,14 @@ def parser() -> argparse.ArgumentParser:
     materialize.add_argument("release_id")
     materialize.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
     materialize.add_argument("--output", type=Path, default=Path("build"))
+    clone = commands.add_parser("clone-release")
+    clone.add_argument("source_release_id")
+    clone.add_argument("target_release_id")
+    clone.add_argument("--output", type=Path, default=Path("build"))
+    serving = commands.add_parser("materialize-serving")
+    serving.add_argument("release_id")
+    serving.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
+    serving.add_argument("--output", type=Path, default=Path("build"))
     return result
 
 
@@ -90,6 +98,14 @@ def main() -> None:
             require_database_url(args.database_url), args.output, args.release_id
         )
         print(json.dumps({"release_id": args.release_id, "forecast_artifacts": count}))
+    elif args.command == "clone-release":
+        target = clone_release(args.output, args.source_release_id, args.target_release_id)
+        print(json.dumps({"release_id": args.target_release_id, "root": str(target)}))
+    elif args.command == "materialize-serving":
+        count = materialize_serving_metadata(
+            require_database_url(args.database_url), args.output, args.release_id
+        )
+        print(json.dumps({"release_id": args.release_id, "serving_artifacts": count}))
 
 
 if __name__ == "__main__":

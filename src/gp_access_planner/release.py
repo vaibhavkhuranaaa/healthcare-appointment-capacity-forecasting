@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import re
+import shutil
+from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -10,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg
+from psycopg.rows import dict_row
 
 PUBLIC_DENYLIST = {"UNIQUE_IDENTIFIER", "unique_identifier"}
 GEOGRAPHY_FIELDS = (
@@ -187,6 +191,163 @@ def export_release(
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return ReleaseSummary(release_id, len(artifacts), total_rows, release_root)
+
+
+def clone_release(output_root: Path, source_release_id: str, target_release_id: str) -> Path:
+    """Create a packaging-only successor without rewriting unchanged large artifacts."""
+    identifiers = (source_release_id, target_release_id)
+    if any(identifier in {".", ".."} for identifier in identifiers) or (
+        safe_segment(source_release_id) != source_release_id
+        or safe_segment(target_release_id) != target_release_id
+    ):
+        raise ValueError("release identifiers must be safe path segments")
+    source = output_root / "releases" / source_release_id
+    target = output_root / "releases" / target_release_id
+    manifest_path = source / "manifest.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"release manifest not found: {manifest_path}")
+    if target.exists():
+        raise FileExistsError(f"target release already exists: {target}")
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    source_prefix = f"releases/{source_release_id}/"
+    target_prefix = f"releases/{target_release_id}/"
+    artifacts = manifest.get("artifacts", [])
+    if any(not isinstance(key, str) or not key.startswith(source_prefix) for key in artifacts):
+        raise ValueError("source manifest contains an invalid artifact key")
+
+    shutil.copytree(source, target, copy_function=os.link)
+    manifest["release_id"] = target_release_id
+    manifest["created_at"] = datetime.now(UTC).isoformat()
+    manifest["artifacts"] = [target_prefix + key.removeprefix(source_prefix) for key in artifacts]
+    target_manifest = target / "manifest.json"
+    target_manifest.unlink()
+    target_manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return target
+
+
+def _compact_count(value: int) -> str:
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.2f}".rstrip("0").rstrip(".") + "m"
+    if value >= 1_000:
+        return f"{value / 1_000:.1f}".rstrip("0").rstrip(".") + "k"
+    return f"{value:,}"
+
+
+def materialize_serving_metadata(database_url: str, output_root: Path, release_id: str) -> int:
+    """Write the bounded geography and observed-context indexes consumed by the Worker."""
+    release_root = output_root / "releases" / release_id
+    forecast_codes = {
+        path.stem.removesuffix(".json") for path in (release_root / "forecasts").glob("*.json.gz")
+    }
+    if not forecast_codes:
+        raise ValueError("serving metadata requires materialized forecast artifacts")
+
+    with psycopg.connect(database_url, row_factory=dict_row) as connection:
+        activity = connection.execute(
+            """
+            SELECT sub_icb_code, min(sub_icb_name) AS sub_icb_name,
+                   min(icb_ons_code) AS icb_ons_code, min(region_ons_code) AS region_ons_code,
+                   appointment_date, sum(recorded_appointments)::bigint AS recorded_appointments,
+                   max(population_coverage) AS population_coverage
+            FROM analytics.daily_recorded_activity
+            WHERE sub_icb_code = ANY(%s)
+            GROUP BY sub_icb_code, appointment_date
+            ORDER BY sub_icb_code, appointment_date
+            """,
+            (sorted(forecast_codes),),
+        ).fetchall()
+
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in activity:
+        grouped[str(row["sub_icb_code"])].append(row)
+    missing = forecast_codes - grouped.keys()
+    if missing:
+        raise ValueError(f"serving metadata is missing activity for: {', '.join(sorted(missing))}")
+
+    geographies: list[dict[str, str]] = []
+    targets: list[Path] = []
+    for code in sorted(forecast_codes):
+        rows = grouped[code]
+        latest = rows[-1]
+        geographies.append(
+            {
+                "code": code,
+                "name": str(latest["sub_icb_name"]),
+                "level": "sub_icb",
+                "parent": str(latest["icb_ons_code"]),
+                "region": str(latest["region_ons_code"]),
+            }
+        )
+        latest_month = latest["appointment_date"].replace(day=1)
+        month_total = sum(
+            int(row["recorded_appointments"])
+            for row in rows
+            if row["appointment_date"].replace(day=1) == latest_month
+        )
+        recent = [
+            {
+                "date": row["appointment_date"].isoformat(),
+                "value": int(row["recorded_appointments"]),
+            }
+            for row in rows[-14:]
+        ]
+        coverage = next(
+            (
+                float(row["population_coverage"])
+                for row in reversed(rows)
+                if row["population_coverage"] is not None
+            ),
+            None,
+        )
+        lanes: list[dict[str, str]] = [
+            {
+                "label": "Recorded appointments",
+                "value": _compact_count(month_total),
+                "detail": f"{latest_month:%B %Y} · not available capacity",
+                "tone": "observed",
+            }
+        ]
+        if coverage is not None:
+            lanes.append(
+                {
+                    "label": "Publisher population coverage",
+                    "value": f"{coverage:.1%}",
+                    "detail": "Latest published GPAD coverage · denominator context",
+                    "tone": "population",
+                }
+            )
+        targets.append(
+            add_json_artifact(
+                output_root,
+                release_id,
+                f"context/{code}/channels.json.gz",
+                {"appointments": recent, "lanes": lanes},
+                update_manifest=False,
+            )
+        )
+        for section in ("workforce", "experience"):
+            targets.append(
+                add_json_artifact(
+                    output_root,
+                    release_id,
+                    f"context/{code}/{section}.json.gz",
+                    {"appointments": [], "lanes": []},
+                    update_manifest=False,
+                )
+            )
+
+    targets.append(
+        add_json_artifact(
+            output_root,
+            release_id,
+            "geographies.json.gz",
+            geographies,
+            update_manifest=False,
+        )
+    )
+    update_manifest_artifacts(output_root, release_id, targets)
+    return len(targets)
 
 
 def update_manifest_artifacts(output_root: Path, release_id: str, targets: Iterable[Path]) -> None:

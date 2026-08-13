@@ -1,17 +1,20 @@
 # 0007: Accept the local release candidate
 
-Status: accepted locally on 2026-08-12; upload and promotion pending approval.
+Status: superseded by corrected candidate `2026-08-13.1` on 2026-08-13.
 
 ## Decision
 
-Accept immutable local candidate `2026-08-12.2` as ready for an approval-gated R2
-upload and candidate smoke test. Do not promote `current.json` yet.
+Candidate `2026-08-12.2` passed local validation and exact R2 checksum comparison but
+failed the geography live smoke because its release package omitted Worker serving
+indexes. Preserve it as immutable evidence and publish a packaging-only successor,
+`2026-08-13.1`, with geography and bounded observed-context indexes. Do not promote
+`current.json` yet.
 
 ## Why
 
-The candidate reconciles 32,871,791 source rows, contains 404,458 bounded artifacts,
-and provides 104 finite ordered forecast files. Python, Worker, dbt, lint, type, static
-build, dry-run, package, accessibility, responsive-browser, and delivery checks pass.
+The successor retains the same 32,871,791 source rows and 104 finite ordered forecast
+files, adds 313 bounded serving artifacts, and passes a 404,772-file remote checksum
+comparison plus live API and rendered-browser smoke tests.
 
 ## Alternatives rejected
 
@@ -24,10 +27,10 @@ build, dry-run, package, accessibility, responsive-browser, and delivery checks 
 
 ## Not done
 
-No external object was written, public URL changed, repository renamed, deployment
-renamed, or production pointer promoted.
+No production pointer was created or promoted. The isolated candidate is not evidence
+of production approval.
 
 ## Changed
 
-Milestones M2 through M6 now have measured evidence and a cold-continuation handoff.
-The next authorized action is to request deployment approval for candidate upload.
+The candidate now serves at the recorded Worker URL and `candidate.json` selects
+`2026-08-13.1`. The next external gate is explicit production-promotion approval.

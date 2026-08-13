@@ -49,21 +49,45 @@ def upload_release(
             "--checksum",
             "--immutable",
             "--checkers",
-            "16",
+            "64",
             "--transfers",
-            "16",
+            "64",
+            "--retries",
+            "5",
+            "--low-level-retries",
+            "10",
+            "--s3-no-check-bucket",
         ],
         check=True,
     )
     run(
-        ["rclone", "check", str(release_root), destination, "--checksum"],
+        [
+            "rclone",
+            "check",
+            str(release_root),
+            destination,
+            "--checksum",
+            "--checkers",
+            "64",
+            "--retries",
+            "5",
+            "--low-level-retries",
+            "10",
+            "--s3-no-check-bucket",
+        ],
         check=True,
     )
     with tempfile.TemporaryDirectory(prefix="gp-access-planner-") as directory:
         pointer = Path(directory) / "candidate.json"
         pointer.write_text(json.dumps({"release_id": release_id}) + "\n", encoding="utf-8")
         run(
-            ["rclone", "copyto", str(pointer), f"{remote.rstrip('/')}/candidate.json"],
+            [
+                "rclone",
+                "copyto",
+                str(pointer),
+                f"{remote.rstrip('/')}/candidate.json",
+                "--s3-no-check-bucket",
+            ],
             check=True,
         )
 

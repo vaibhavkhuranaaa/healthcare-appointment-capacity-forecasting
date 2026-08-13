@@ -9,7 +9,7 @@ on:
       candidate_url:
         description: Candidate Worker URL
         required: true
-        default: https://gp-access-planner-candidate.vaibhavkhurana.workers.dev
+        default: https://gp-access-planner-candidate.gp-access-planner.workers.dev
 
 jobs:
   candidate:
@@ -40,6 +40,14 @@ jobs:
         run: |
           curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/meta" --output /tmp/meta.json
           jq -e --arg release "$RELEASE_ID" '.release_id == $release and .classification == "derived"' /tmp/meta.json
+          curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/geographies?level=sub_icb" --output /tmp/geographies.json
+          jq -e --arg release "$RELEASE_ID" '.release_id == $release and .classification == "observed" and (.data | length) > 0' /tmp/geographies.json
+          code=$(jq -r '.data[0].code' /tmp/geographies.json)
+          curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/forecasts?sub_icb=$code&horizon=7" --output /tmp/forecast.json
+          jq -e --arg release "$RELEASE_ID" '.release_id == $release and .forecast_status == "approved" and (.data | length) == 7' /tmp/forecast.json
+          curl --fail --location --retry 6 --retry-all-errors "$CANDIDATE_URL/data" --output /dev/null
+          curl --fail --location --retry 6 --retry-all-errors "$CANDIDATE_URL/capacity-lab" --output /dev/null
+          curl --fail --location --retry 6 --retry-all-errors "$CANDIDATE_URL/methods" --output /dev/null
 
 # The private build plane uploads immutable objects and candidate.json with rclone first.
 # This workflow deploys only the isolated candidate Worker. It never writes current.json.

@@ -61,6 +61,8 @@ gp-access-planner verify-sources /private/path/source-manifest.toml
 gp-access-planner ingest /private/path/source-manifest.toml --database-url "$DATABASE_URL"
 gp-access-planner export-release 2026-08-12.1 --database-url "$DATABASE_URL"
 gp-access-planner evaluate 2026-08-12.1 --database-url "$DATABASE_URL"
+gp-access-planner materialize-forecasts 2026-08-12.1 --database-url "$DATABASE_URL"
+gp-access-planner materialize-serving 2026-08-12.1 --database-url "$DATABASE_URL"
 ```
 
 Candidate upload and production pointer promotion are separate, manually dispatched
@@ -70,7 +72,7 @@ Bulk upload runs from the private build machine because release artifacts are no
 committed. Configure `rclone` 1.59 or newer for the R2 S3 endpoint, then run:
 
 ```sh
-uv run python scripts/upload_release.py build/releases/2026-08-12.2 r2:gp-access-planner-releases
+uv run python scripts/upload_release.py build/releases/2026-08-13.1 r2:gp-access-planner-releases
 ```
 
 The command checksum-verifies immutable release objects before writing
