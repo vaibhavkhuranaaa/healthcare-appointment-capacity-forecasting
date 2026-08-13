@@ -1,7 +1,41 @@
 {
-  "name": "healthcare-appointment-capacity-forecasting",
-  "main": "src/index.js",
-  "compatibility_date": "2026-07-31",
-  "assets": { "directory": "../dashboard", "binding": "ASSETS" },
-  "observability": { "enabled": false }
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "gp-access-planner",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": { "RELEASE_POINTER": "current.json" },
+  "assets": {
+    "directory": "../out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "r2_buckets": [
+    { "binding": "DATA", "bucket_name": "gp-access-planner-releases" }
+  ],
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 60, "period": 60 }
+    }
+  ],
+  "env": {
+    "candidate": {
+      "name": "gp-access-planner-candidate",
+      "vars": { "RELEASE_POINTER": "candidate.json" },
+      "r2_buckets": [
+        { "binding": "DATA", "bucket_name": "gp-access-planner-releases" }
+      ],
+      "ratelimits": [
+        {
+          "name": "RATE_LIMITER",
+          "namespace_id": "1002",
+          "simple": { "limit": 60, "period": 60 }
+        }
+      ]
+    }
+  },
+  "observability": { "enabled": true },
+  "placement": { "mode": "smart" }
 }

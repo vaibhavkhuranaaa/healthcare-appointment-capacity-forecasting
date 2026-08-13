@@ -1,0 +1,234 @@
+from __future__ import annotations
+
+import gzip
+import json
+import re
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import psycopg
+
+PUBLIC_DENYLIST = {"UNIQUE_IDENTIFIER", "unique_identifier"}
+GEOGRAPHY_FIELDS = (
+    "SUB_ICB_LOCATION_CODE",
+    "SUB_ICB_CODE",
+    "ONS_SUB_ICB_LOCATION_CODE",
+    "PRACTICE_CODE",
+    "GP_CODE",
+    "PCN_CODE",
+    "REGION_CODE",
+)
+PERIOD_FIELDS = ("Appointment_Date", "Appointment_Month", "MONTH", "Date", "EXTRACT_DATE")
+
+
+@dataclass(frozen=True)
+class ReleaseSummary:
+    release_id: str
+    artifact_count: int
+    row_count: int
+    root: Path
+
+
+def public_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if key not in PUBLIC_DENYLIST}
+
+
+def partition_key(row: dict[str, Any]) -> tuple[str, str]:
+    geography = next((str(row[field]) for field in GEOGRAPHY_FIELDS if row.get(field)), "national")
+    raw_period = next((str(row[field]) for field in PERIOD_FIELDS if row.get(field)), "snapshot")
+    period = raw_period[:10].replace("/", "-").replace(" ", "_")
+    return geography, period
+
+
+def safe_segment(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "unknown"
+
+
+def write_json_gzip(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(path, "wt", encoding="utf-8", compresslevel=6) as handle:
+        json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
+
+
+def _flush_page(
+    root: Path,
+    dataset_id: str,
+    geography: str,
+    period: str,
+    page: int,
+    rows: list[dict[str, Any]],
+    *,
+    has_next: bool,
+) -> Path:
+    target = (
+        root
+        / safe_segment(dataset_id)
+        / safe_segment(geography)
+        / safe_segment(period)
+        / f"{page}.json.gz"
+    )
+    write_json_gzip(target, {"rows": rows, "next_cursor": str(page + 1) if has_next else None})
+    return target
+
+
+def export_release(
+    database_url: str,
+    output_root: Path,
+    release_id: str,
+    dataset_ids: Iterable[str] | None = None,
+    source_cutoff: str = "2026-07-01",
+    model_version: str = "pending-evaluation",
+) -> ReleaseSummary:
+    release_root = output_root / "releases" / release_id
+    selected = set(dataset_ids or ())
+    artifacts: list[str] = []
+    total_rows = 0
+    source_versions: dict[str, str] = {}
+    dataset_rows: dict[str, int] = {}
+    with psycopg.connect(database_url) as connection:
+        datasets = selected or {
+            row[0]
+            for row in connection.execute(
+                "SELECT DISTINCT dataset_id FROM raw.source_row ORDER BY dataset_id"
+            )
+        }
+        for dataset_id in sorted(datasets):
+            version = connection.execute(
+                """
+                SELECT source_hash, row_count FROM audit.ingestion_run
+                WHERE dataset_id = %s AND status = 'completed'
+                ORDER BY completed_at DESC LIMIT 1
+                """,
+                (dataset_id,),
+            ).fetchone()
+            if not version:
+                raise ValueError(f"dataset has no completed ingestion: {dataset_id}")
+            source_versions[dataset_id] = str(version[0])
+            dataset_rows[dataset_id] = int(version[1])
+            current_key: tuple[str, str] | None = None
+            page = 0
+            rows: list[dict[str, Any]] = []
+            with connection.cursor(name=f"release_{dataset_id.replace('-', '_')}") as cursor:
+                cursor.execute(
+                    """
+                    SELECT row_data FROM raw.source_row
+                    WHERE dataset_id = %s
+                    ORDER BY
+                        COALESCE(
+                            row_data->>'SUB_ICB_LOCATION_CODE',
+                            row_data->>'SUB_ICB_CODE',
+                            row_data->>'ONS_SUB_ICB_LOCATION_CODE',
+                            row_data->>'PRACTICE_CODE',
+                            row_data->>'GP_CODE',
+                            row_data->>'PCN_CODE',
+                            row_data->>'REGION_CODE',
+                            'national'
+                        ),
+                        COALESCE(
+                            row_data->>'Appointment_Date',
+                            row_data->>'Appointment_Month',
+                            row_data->>'MONTH',
+                            row_data->>'Date',
+                            row_data->>'EXTRACT_DATE',
+                            'snapshot'
+                        ),
+                        source_member,
+                        row_number
+                    """,
+                    (dataset_id,),
+                )
+                for (row_data,) in cursor:
+                    clean = public_row(row_data)
+                    key = partition_key(clean)
+                    if current_key is None:
+                        current_key = key
+                    if key != current_key or len(rows) == 500:
+                        target = _flush_page(
+                            release_root,
+                            dataset_id,
+                            *current_key,
+                            page,
+                            rows,
+                            has_next=key == current_key,
+                        )
+                        artifacts.append(str(target.relative_to(output_root)))
+                        page = page + 1 if key == current_key else 0
+                        rows = []
+                        current_key = key
+                    rows.append(clean)
+                    total_rows += 1
+                if rows and current_key:
+                    target = _flush_page(
+                        release_root,
+                        dataset_id,
+                        *current_key,
+                        page,
+                        rows,
+                        has_next=False,
+                    )
+                    artifacts.append(str(target.relative_to(output_root)))
+
+    manifest = {
+        "release_id": release_id,
+        "created_at": datetime.now(UTC).isoformat(),
+        "artifact_count": len(artifacts),
+        "row_count": total_rows,
+        "dataset_rows": dataset_rows,
+        "source_versions": source_versions,
+        "source_cutoff": source_cutoff,
+        "model_version": model_version,
+        "artifacts": artifacts,
+        "classification": "source-native public rows and separately derived outputs",
+    }
+    manifest_path = release_root / "manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return ReleaseSummary(release_id, len(artifacts), total_rows, release_root)
+
+
+def update_manifest_artifacts(output_root: Path, release_id: str, targets: Iterable[Path]) -> None:
+    manifest_path = output_root / "releases" / release_id / "manifest.json"
+    if not manifest_path.exists():
+        return
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    artifacts = set(manifest.get("artifacts", []))
+    artifacts.update(str(target.relative_to(output_root)) for target in targets)
+    manifest["artifacts"] = sorted(artifacts)
+    manifest["artifact_count"] = len(artifacts)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def add_json_artifact(
+    output_root: Path,
+    release_id: str,
+    relative_key: str,
+    payload: Any,
+    *,
+    update_manifest: bool = True,
+) -> Path:
+    if relative_key.startswith("/") or ".." in Path(relative_key).parts:
+        raise ValueError("release artifact key must remain inside the release")
+    target = output_root / "releases" / release_id / relative_key
+    if target.suffix != ".gz":
+        raise ValueError("release JSON artifacts must use a .json.gz key")
+    write_json_gzip(target, payload)
+    if update_manifest:
+        update_manifest_artifacts(output_root, release_id, [target])
+    return target
+
+
+def promote_release(output_root: Path, release_id: str) -> Path:
+    manifest = output_root / "releases" / release_id / "manifest.json"
+    if not manifest.is_file():
+        raise FileNotFoundError(f"release manifest not found: {manifest}")
+    pointer = output_root / "current.json"
+    temporary = output_root / "current.json.next"
+    temporary.write_text(
+        json.dumps({"release_id": release_id}, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(pointer)
+    return pointer

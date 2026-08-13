@@ -1,20 +1,17 @@
 {
-  "version": 1,
-  "slug": "healthcare-appointment-capacity-forecasting",
-  "title": "Healthcare - Appointment Demand, No-Show, and Capacity Forecasting",
-  "status": "live-verified",
-  "publicUrl": "https://healthcare-appointment-capacity-forecasting.vaibhavkhurana.workers.dev",
-  "deployment": {
-    "provider": "Cloudflare Workers Free",
-    "versionId": "cbb4d4d9-2ca6-444d-9301-639c6a3fc5cf",
-    "sourceSha": "6e8f390"
-  },
+  "version": 2,
+  "slug": "gp-access-planner",
+  "title": "GP Access Planner",
+  "status": "replacement-in-verification",
+  "currentPublicRelease": "v0 retained until approval",
   "source": {
-    "dataBoundary": "Synthea or public aggregate operations data; no PHI and no clinical recommendations."
+    "dataBoundary": "Public statistical releases; no PHI, operational slots, rosters, or clinical advice.",
+    "classification": "Non-commercial use"
   },
   "evidence": [
-    "docs/deployment-evidence.md",
-    "evaluation/report.md",
-    "data/nhs-gpad/apr-2026-national-daily-v1/manifest.yml"
+    "docs/architecture.md",
+    "docs/data-contract.md",
+    "docs/metric-contract.md",
+    "evaluation/report.md"
   ]
 }

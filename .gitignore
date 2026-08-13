@@ -3,7 +3,15 @@ __pycache__/
 .env
 .DS_Store
 build/
+catboost_info/
+out/
+.next/
+node_modules/
+*.tsbuildinfo
 worker/.wrangler/
+target/
+logs/
+.user.yml
 # Local tooling
 AGENTS.md
 **/AGENTS.md
@@ -50,3 +58,6 @@ docs/PROJECT_CONTEXT.md
 docs/takeover-prompt.md
 docs/continuation-guide.md
 scripts/project_kit.py
+.project/
+/data/
+dashboard/gpad-data.json

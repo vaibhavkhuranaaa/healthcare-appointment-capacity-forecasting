@@ -1,44 +1,32 @@
-# Baseline and metric contract
+# Forecast and scenario metric contract
 
-## Decision and targets
+## Target
 
-The decision owner is an operations manager deciding whether the offered daily
-appointment capacity is likely to meet expected bookings. The baseline predicts
-two non-clinical targets for each evaluation date:
+The forecast target is daily recorded GPAD appointments by sub-ICB. It retains
+Attended, DNA, and Unknown status components but does not infer cancellations,
+offered slots, staffing workload, or capacity.
 
-- `recorded_appointments`: expected recorded appointment volume.
-- `known_status_dna_rate`: `dna_appointments / (attended_appointments + dna_appointments)`.
+## Evaluation
 
-## Fixed evaluation inputs
+Seasonal naive, Elastic Net, LightGBM, and CatBoost use fixed seeds and at least
+twelve rolling origins. Each supported geography requires twelve months of history
+and 90% published GPAD population coverage.
 
-| Item | Value |
-| --- | --- |
-| Fixture version | `nhs-gpad-apr-2026-national-daily-v1` |
-| Training window | 2026-03-01 through 2026-04-16 (47 daily rows) |
-| Evaluation window | 2026-04-17 through 2026-04-30 (14 daily rows) |
-| Demand baseline | Mean recorded appointments for the same weekday in the training window. |
-| DNA baseline | Mean known-status DNA rate for the same weekday in the training window. |
-| Capacity comparison | Compare the unrounded volume forecast with a positive user-supplied hypothetical daily capacity; flag a shortfall when forecast is greater. |
+A boosted challenger must, at each 7, 14, and 28-day horizon:
 
-This weekday seasonal-naive baseline is deterministic. A reviewer can reproduce
-each prediction by filtering the CSV to the four training dates with the same
-weekday, computing the arithmetic mean, and applying it to the matching
-evaluation date. It is a benchmark, not a production forecast.
+- improve WAPE by at least 5% relative to seasonal naive;
+- achieve MASE below 1;
+- place 75% to 90% of observations inside its nominal 80% interval; and
+- avoid greater than 10% WAPE regression in at least 90% of eligible sub-ICBs.
 
-## Release-blocking measurements for M3
+If no challenger clears every gate, seasonal naive remains active. An active-model
+WAPE above 15% blocks a new forecast for that geography.
 
-| Metric | Calculation | Direction |
-| --- | --- | --- |
-| Demand WAPE | `sum(abs(actual - forecast)) / sum(actual)` | Lower is better. |
-| No-show precision and recall | Compare a documented high-risk threshold with actual high-rate days | Higher is better; threshold must be declared. |
-| Calibration | Compare predicted and observed no-show rates in bins | Smaller gap is better. |
-| Freshness | Age of the latest input date at run time | Lower is better. |
-| Batch latency and cost | Timed local run and direct local cost estimate | Report, do not infer cloud cost. |
+## Scenario outputs
 
-For the fixed public-aggregate first demo, the candidate quality gates are demand WAPE
-at or below 15%, no-show precision at or above 75%, and no-show recall at or
-above 30% using a 10% high-risk rate threshold. These are demonstration gates,
-not production targets. The reproducible result, calibration table, latency,
-cost boundary, and limitations are in `evaluation/report.md`. The source does
-not publish reliable available appointment counts; no observed capacity claim is
-permitted.
+`median_gap = forecast_p50 - hypothetical_capacity`
+
+`p90_risk_gap = forecast_p90 - hypothetical_capacity`
+
+Positive gaps are review flags, not operational recommendations. Capacity must be a
+whole-number visitor input for every weekday or a valid in-horizon date override.
