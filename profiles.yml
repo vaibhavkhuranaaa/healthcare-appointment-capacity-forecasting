@@ -1,0 +1,12 @@
+gp_access_planner:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', '127.0.0.1') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'planner') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'planner') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'gp_access_planner') }}"
+      schema: analytics
+      threads: 4

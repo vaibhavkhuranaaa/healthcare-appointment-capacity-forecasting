@@ -1,51 +1,36 @@
-# NHS GPAD public-aggregate baseline evaluation
+# GP Access Planner evaluation status
 
-## Scope
+## Implemented evidence
 
-- Fixture: `nhs-gpad-apr-2026-national-daily-v1`, public England-wide daily aggregates only.
-- Training: 2026-03-01 through 2026-04-16; evaluation: 2026-04-17 through 2026-04-30.
-- Baseline: weekday seasonal-naive recorded-volume and known-status DNA-rate means.
-- Generated locally; no cloud service, PHI, clinical recommendation, or observed-capacity claim.
+- Forecast features use historical lags, rolling history, calendar fields, bank holidays,
+  population coverage, and approved lagged context only.
+- Tests prove lag construction is backward-looking, direct targets are future dates,
+  quantiles are ordered, seeds are fixed, and at least twelve origins are required.
+- The model contract includes seasonal naive, Elastic Net, LightGBM, and CatBoost.
+- Aggregate and sub-ICB promotion gates fall back to seasonal naive on any failure.
 
-## Measured results
+## Full-snapshot result
 
-| Measure | Result | Candidate local-demo gate | Status |
-| --- | ---: | ---: | --- |
-| Demand WAPE | 9.3% | ≤ 15.0% | pass |
-| No-show precision (10% threshold) | 0.0% | ≥ 75.0% | review |
-| No-show recall (10% threshold) | 0.0% | ≥ 30.0% | review |
-| Local workflow median latency (5 runs) | 17.7 ms | report only | measured |
-| Direct metered service cost | $0 | $0 local-only | pass |
+The private 2026-08-12 snapshot loaded 32,871,791 rows from 29 analytical resources.
+The stored-row count exactly matches the ingestion audit total. All 17 dbt models and
+tests passed, producing 89,304 sub-ICB/day records. Of those geographies, 104 met the
+twelve-month history and 90% population-coverage requirements.
 
-The gates are demonstrative quality checks for this fixed public-aggregate fixture, not production service-level objectives.
+Twelve rolling origins from 29 July 2025 through 2 June 2026 produced the following
+aggregate results:
 
-## Calibration
+| Model | 7-day WAPE | 14-day WAPE | 28-day WAPE | 28-day MASE | 28-day interval coverage | Decision |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Seasonal naive | 5.60% | 9.10% | 10.96% | 0.580 | 55.09% | Approved fallback |
+| Elastic Net | 42.81% | 45.32% | 49.04% | 2.531 | 79.45% | Failed 7-day gate |
+| LightGBM | 11.86% | 16.48% | 20.30% | 1.048 | 78.11% | Failed 7-day gate |
+| CatBoost | 12.01% | 16.53% | 20.40% | 1.053 | 77.91% | Failed 7-day gate |
 
-| Forecast bin | Days | Mean forecast | Mean actual | Absolute gap |
-| --- | ---: | ---: | ---: | ---: |
-| below 10% | 14 | 5.2% | 5.0% | 0.2% |
+No challenger improved WAPE by 5% at every horizon, so seasonal naive remains the
+approved champion. Its 28-day WAPE is below the 15% active-model ceiling. Its nominal
+80% interval under-covered at 55.09%; the p10–p90 band must therefore be presented as
+an indicative uncertainty range, not a calibrated probability guarantee.
 
-## Freshness and limitations
-
-- The latest fixture date is 2026-04-30, which is 92 days old on generation. This is expected for a fixed demo fixture and fails any real operational freshness expectation.
-- Fairness slices are intentionally unavailable: the national aggregate fixture retains no demographic, provider, patient, or location attributes. Do not infer fairness from this report.
-- The DNA benchmark is only a weekday-rate aggregate; it does not score people or appointments and should not direct clinical or staffing decisions.
-- Local cost excludes the already-owned laptop, electricity, and developer time; no cloud, SaaS, or metered API cost was incurred.
-
-## Failure coverage
-
-| Failure state | Handling | Evidence |
-| --- | --- | --- |
-| Fixture changed or malformed | Stop before loading and print a safe input-error recovery message. | Checksum test and CLI error path. |
-| Schema drift, duplicate/missing dates, or broken appointment reconciliation | Reject the source before writing curated tables. | Unit tests. |
-| Empty or incomplete input | Reject because the fixture must contain exactly 61 contiguous rows. | Row-count validation. |
-| Provider timeout or degraded remote dependency | Not applicable: this M3 workflow has no external provider, API, or cloud dependency. | Local-first architecture decision. |
-
-## Reproduction
-
-```sh
-uv run --with-requirements requirements.txt python -m src.capacity_forecasting.evaluate
-uv run --with-requirements requirements.txt python -m unittest discover -s tests -v
-```
-
-The first command validates the manifest and fixture before evaluating it, writes the local database under `build/`, and regenerates this report.
+Local candidate `2026-08-12.2` contains 32,871,791 source rows, 404,458 immutable
+artifacts, and 104 finite ordered 28-day forecast files. It has not been uploaded or
+promoted. The existing v0 remains active pending deployment approval.

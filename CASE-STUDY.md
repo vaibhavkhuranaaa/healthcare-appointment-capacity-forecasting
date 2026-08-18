@@ -1,34 +1,35 @@
-# Healthcare - Appointment Demand, No-Show, and Capacity Forecasting
+# GP Access Planner
 
-## The industry question
+## The problem
 
-**Problem:** Forecasts non-clinical appointment demand and no-show risk to support capacity planning.
+Public primary-care data is rich enough to describe recorded access pressure, but not
+actual available capacity. Treating calls, online submissions, workforce, or recorded
+appointments as one demand total would double-count needs and overstate what the data
+can prove.
 
-**Decision owner:** Operations manager adjusts staffing and appointment capacity.
+## The response
 
-**Data boundary:** Synthea or public aggregate operations data; no PHI and no clinical recommendations.
+GP Access Planner preserves every selected public row at publisher grain and presents
+two explicit workflows. Plan forecasts recorded GPAD appointments with uncertainty and
+keeps context channels in separate timetable lanes. Capacity Lab compares those
+forecasts with a visitor's hypothetical weekday schedule.
 
-## What a recruiter can review
+## Engineering evidence
 
-1. A portfolio page at `/projects/healthcare-appointment-capacity-forecasting` with the problem, architecture, evidence, and limitations.
-2. A local reproducible workflow using only approved public or synthetic data.
-3. A versioned evaluation report covering quality, latency, cost, and relevant failure modes.
+- Private checksummed snapshot covering GPAD, telephony, online consultation,
+  registered patients, workforce, ODS, patient experience, deprivation, and respiratory surveillance.
+- PostgreSQL/dbt separation between immutable source rows and derived marts.
+- Baseline-first evaluation across 7, 14, and 28-day horizons with twelve rolling origins.
+- Immutable R2 release objects, bounded API reads, atomic promotion, and rollback.
+- Static Next.js interface with keyboard controls, responsive tables, self-hosted fonts,
+  reduced motion, and explicit observed/forecast/synthetic encodings.
 
-## Architecture and evidence
+## Honest limit
 
-The workflow uses versioned ingestion, validation, a local-first data store, a typed product layer, automated tests, OpenTelemetry-based observability, and GitHub Actions. Azure, AWS, Snowflake, Databricks, or SaaS tooling is an explicitly justified enterprise variant rather than evidence-free stack decoration.
+This product does not know actual slots, rosters, cancellations, workload, or capacity.
+It offers planning evidence, not a measurement of NHS utilisation and not clinical advice.
 
-## Cost, safety, and tradeoffs
+## Status
 
-- Local containers and open-source tools are the default; cloud spend is enabled only after a budget alert, owner approval, and a written reason.
-- The demonstration uses public, synthetic, anonymized, or licensed data only. It makes no legal advice, clinical guidance, investment, customer, or production-impact claim.
-- The public site will show the dataset boundary, evaluation window, metric calculation, known limitations, and whether the interactive demo is live or recorded.
-
-## Demo and interview angle
-
-The portfolio version explains the decision owner, a realistic failure mode, the local-first tradeoff, the metric that would block release, and what would change before real regulated data is permitted.
-
-## Links
-
-- **Implementation charter:** [Healthcare - Appointment Demand, No-Show, and Capacity Forecasting](charter.md)
-- **Status:** Planned - publish after the representative first-demo gate passes.
+Replacement implementation and local verification are in progress. The existing v0
+remains served until the candidate passes private evaluation and receives deployment approval.

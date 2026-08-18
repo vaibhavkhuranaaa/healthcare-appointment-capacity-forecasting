@@ -1,5 +1,0 @@
-version: 1
-architecture: approved-2026-07-26
-publication: public-cloudflare-release-verified-2026-07-31
-data_source: nhs-gpad-april-2026-public-aggregate-approved-2026-07-31
-cloud: cloudflare-workers-free-public-workers-dev-fail-closed-retain-on-failure-approved-2026-07-31

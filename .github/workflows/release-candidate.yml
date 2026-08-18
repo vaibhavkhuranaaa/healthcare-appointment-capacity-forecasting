@@ -1,0 +1,53 @@
+name: deploy and smoke release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Immutable release identifier already uploaded by the private pipeline
+        required: true
+      candidate_url:
+        description: Candidate Worker URL
+        required: true
+        default: https://gp-access-planner-candidate.gp-access-planner.workers.dev
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    environment: candidate
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RELEASE_ID: ${{ inputs.release_id }}
+      CANDIDATE_URL: ${{ inputs.candidate_url }}
+      NEXT_PUBLIC_FIXTURE_MODE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verify uploaded candidate pointer
+        run: |
+          npx wrangler r2 object get gp-access-planner-releases/candidate.json --file=/tmp/candidate.json --remote
+          jq -e --arg release "$RELEASE_ID" '.release_id == $release' /tmp/candidate.json
+      - run: npx wrangler deploy --env candidate --config worker/wrangler.jsonc
+      - name: Smoke candidate
+        run: |
+          curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/meta" --output /tmp/meta.json
+          jq -e --arg release "$RELEASE_ID" '.release_id == $release and .classification == "derived"' /tmp/meta.json
+          curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/geographies?level=sub_icb" --output /tmp/geographies.json
+          jq -e --arg release "$RELEASE_ID" '.release_id == $release and .classification == "observed" and (.data | length) > 0' /tmp/geographies.json
+          code=$(jq -r '.data[0].code' /tmp/geographies.json)
+          curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/forecasts?sub_icb=$code&horizon=7" --output /tmp/forecast.json
+          jq -e --arg release "$RELEASE_ID" '.release_id == $release and .forecast_status == "approved" and (.data | length) == 7' /tmp/forecast.json
+          curl --fail --location --retry 6 --retry-all-errors "$CANDIDATE_URL/data" --output /dev/null
+          curl --fail --location --retry 6 --retry-all-errors "$CANDIDATE_URL/capacity-lab" --output /dev/null
+          curl --fail --location --retry 6 --retry-all-errors "$CANDIDATE_URL/methods" --output /dev/null
+
+# The private build plane uploads immutable objects and candidate.json with rclone first.
+# This workflow deploys only the isolated candidate Worker. It never writes current.json.
