@@ -9,7 +9,7 @@ on:
       production_url:
         description: Production Worker URL
         required: true
-        default: https://gp-access-planner.vaibhavkhurana.workers.dev
+        default: https://gp-access-planner.gp-access-planner.workers.dev
 
 jobs:
   promote:

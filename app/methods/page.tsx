@@ -77,7 +77,7 @@ export default function MethodsPage() {
         <p className="table-note">
           Twelve rolling origins covered 104 eligible sub-ICBs. The baseline interval captured
           55.09% of observations at 28 days, below its nominal 80%; treat the band as indicative,
-          not a calibrated probability guarantee. Candidate upload still requires approval.
+          not a calibrated probability guarantee.
         </p>
       </section>
       <section className="method-columns portfolio-evidence">
