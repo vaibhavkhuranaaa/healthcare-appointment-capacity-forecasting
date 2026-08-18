@@ -26,6 +26,7 @@ GEOGRAPHY_FIELDS = (
     "REGION_CODE",
 )
 PERIOD_FIELDS = ("Appointment_Date", "Appointment_Month", "MONTH", "Date", "EXTRACT_DATE")
+RELEASE_POINTER_FIELDS = ("created_at", "source_cutoff", "source_versions", "model_version")
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,21 @@ class ReleaseSummary:
     artifact_count: int
     row_count: int
     root: Path
+
+
+def release_pointer(manifest: dict[str, Any], release_id: str | None = None) -> dict[str, Any]:
+    """Return only the bounded release summary needed by the public Worker."""
+    identifier = release_id or manifest.get("release_id")
+    if not isinstance(identifier, str):
+        raise ValueError("release manifest is missing its identifier")
+    manifest_identifier = manifest.get("release_id")
+    if manifest_identifier is not None and manifest_identifier != identifier:
+        raise ValueError("release manifest identifier does not match the pointer")
+    pointer = {"release_id": identifier}
+    pointer.update(
+        {field: manifest[field] for field in RELEASE_POINTER_FIELDS if field in manifest}
+    )
+    return pointer
 
 
 def public_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -387,8 +403,9 @@ def promote_release(output_root: Path, release_id: str) -> Path:
         raise FileNotFoundError(f"release manifest not found: {manifest}")
     pointer = output_root / "current.json"
     temporary = output_root / "current.json.next"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
     temporary.write_text(
-        json.dumps({"release_id": release_id}, separators=(",", ":")) + "\n",
+        json.dumps(release_pointer(payload, release_id), separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
     temporary.replace(pointer)

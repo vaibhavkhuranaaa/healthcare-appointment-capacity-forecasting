@@ -31,9 +31,25 @@ def test_partition_uses_native_geography_and_period() -> None:
 def test_promotion_replaces_only_current_pointer(tmp_path: Path) -> None:
     manifest = tmp_path / "releases" / "release-a" / "manifest.json"
     manifest.parent.mkdir(parents=True)
-    manifest.write_text("{}", encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "release_id": "release-a",
+                "created_at": "2026-08-12T00:00:00Z",
+                "source_cutoff": "2026-07-01",
+                "model_version": "seasonal-naive-v1",
+                "artifacts": ["releases/release-a/large.json.gz"],
+            }
+        ),
+        encoding="utf-8",
+    )
     pointer = promote_release(tmp_path, "release-a")
-    assert json.loads(pointer.read_text(encoding="utf-8")) == {"release_id": "release-a"}
+    assert json.loads(pointer.read_text(encoding="utf-8")) == {
+        "release_id": "release-a",
+        "created_at": "2026-08-12T00:00:00Z",
+        "source_cutoff": "2026-07-01",
+        "model_version": "seasonal-naive-v1",
+    }
 
 
 def test_release_artifact_is_bounded_to_release_root(tmp_path: Path) -> None:
@@ -85,6 +101,9 @@ def test_clone_release_rekeys_manifest_without_mutating_source(tmp_path: Path) -
         json.dumps(
             {
                 "release_id": "release-a",
+                "created_at": "2026-08-12T00:00:00Z",
+                "source_cutoff": "2026-07-01",
+                "model_version": "seasonal-naive-v1",
                 "artifact_count": 1,
                 "artifacts": ["releases/release-a/forecasts/00A.json.gz"],
             }
@@ -127,6 +146,9 @@ def test_bulk_upload_verifies_immutable_release_before_candidate_pointer(tmp_pat
         json.dumps(
             {
                 "release_id": "release-a",
+                "created_at": "2026-08-12T00:00:00Z",
+                "source_cutoff": "2026-07-01",
+                "model_version": "seasonal-naive-v1",
                 "artifact_count": 1,
                 "artifacts": ["releases/release-a/forecasts/00A.json.gz"],
             }
@@ -139,7 +161,10 @@ def test_bulk_upload_verifies_immutable_release_before_candidate_pointer(tmp_pat
         assert check
         if command[1] == "copyto":
             assert json.loads(Path(command[2]).read_text(encoding="utf-8")) == {
-                "release_id": "release-a"
+                "release_id": "release-a",
+                "created_at": "2026-08-12T00:00:00Z",
+                "source_cutoff": "2026-07-01",
+                "model_version": "seasonal-naive-v1",
             }
         commands.append(command)
 
