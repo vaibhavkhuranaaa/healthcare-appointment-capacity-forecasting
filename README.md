@@ -65,8 +65,9 @@ gp-access-planner materialize-forecasts 2026-08-12.1 --database-url "$DATABASE_U
 gp-access-planner materialize-serving 2026-08-12.1 --database-url "$DATABASE_URL"
 ```
 
-Candidate upload and production pointer promotion are separate, manually dispatched
-workflows. The existing v0 stays active until human deployment approval.
+Production release `2026-08-13.1` is live at
+`https://gp-access-planner.gp-access-planner.workers.dev`. Candidate upload and
+production pointer promotion remain separate approval boundaries for future releases.
 
 Bulk upload runs from the private build machine because release artifacts are not
 committed. Configure `rclone` 1.59 or newer for the R2 S3 endpoint, then run:
@@ -77,7 +78,7 @@ uv run python scripts/upload_release.py build/releases/2026-08-13.1 r2:gp-access
 
 The command checksum-verifies immutable release objects before writing
 `candidate.json`. The candidate workflow deploys an isolated Worker against that
-pointer. Only the separately approved production workflow writes `current.json`.
+pointer. Only a separately approved promotion writes `current.json`.
 
 ## Source terms
 

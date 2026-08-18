@@ -2,8 +2,8 @@
   "version": 2,
   "slug": "gp-access-planner",
   "title": "GP Access Planner",
-  "status": "replacement-in-verification",
-  "currentPublicRelease": "v0 retained until approval",
+  "status": "production",
+  "currentPublicRelease": "2026-08-13.1",
   "source": {
     "dataBoundary": "Public statistical releases; no PHI, operational slots, rosters, or clinical advice.",
     "classification": "Non-commercial use"

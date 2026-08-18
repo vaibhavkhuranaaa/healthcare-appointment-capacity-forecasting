@@ -1,10 +1,9 @@
 # Deployment evidence
 
-## Existing v0
+## Prior v0
 
-The existing Worker release was verified before this revamp and remains active. Its
-historical URL and version are intentionally not represented as GP Access Planner
-replacement evidence.
+The prior Worker release was verified before this revamp and is retained as historical
+evidence. It is no longer the GP Access Planner production release.
 
 ## Replacement
 
@@ -22,8 +21,11 @@ replacement evidence.
 | Candidate isolation | Verified locally; candidate environment reads `candidate.json`, production reads `current.json` |
 | Candidate R2 upload | Passed; 404,772/404,772 local and remote files checksum-matched with zero differences |
 | Candidate live smoke test | Passed at `https://gp-access-planner-candidate.gp-access-planner.workers.dev` for metadata, 104 geographies, forecasts, observed context, scenarios, and all four product routes |
-| Production pointer promotion | Not approved or performed |
+| Production pointer promotion | Passed on 2026-08-18; `current.json` selects `2026-08-13.1` |
+| Production Worker | Deployed from merged commit `b7b372a` as version `cdd1f939-a2c6-473c-b37b-d56de9bf5a97` at `https://gp-access-planner.gp-access-planner.workers.dev` |
+| Production live smoke test | Passed for metadata, 104 geographies, ordered forecasts, observed context, synthetic scenarios, and all four product routes |
 
-The isolated candidate Worker reads `candidate.json`, which selects `2026-08-13.1`.
-The bucket root contains no `current.json`, so the production selection remains
-untouched. Candidate evidence is not production-promotion approval.
+The isolated candidate Worker continues to read `candidate.json`; production reads
+`current.json`. Both pointers select the same immutable `2026-08-13.1` release. The
+prior candidate remains available for comparison, and pointer-only rollback remains
+possible without rewriting release artifacts.
