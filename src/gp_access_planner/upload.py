@@ -9,6 +9,8 @@ import tempfile
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
+from gp_access_planner.release import release_pointer
+
 RELEASE_ID = re.compile(r"[A-Za-z0-9._-]{1,80}")
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -79,7 +81,10 @@ def upload_release(
     )
     with tempfile.TemporaryDirectory(prefix="gp-access-planner-") as directory:
         pointer = Path(directory) / "candidate.json"
-        pointer.write_text(json.dumps({"release_id": release_id}) + "\n", encoding="utf-8")
+        manifest = json.loads((release_root / "manifest.json").read_text(encoding="utf-8"))
+        pointer.write_text(
+            json.dumps(release_pointer(manifest, release_id)) + "\n", encoding="utf-8"
+        )
         run(
             [
                 "rclone",

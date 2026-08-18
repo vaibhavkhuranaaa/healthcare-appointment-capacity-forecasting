@@ -1,6 +1,12 @@
 import { parseScenario, runScenario, type ForecastDay } from "./scenario";
 
-type ReleasePointer = { release_id: string };
+type ReleasePointer = {
+  release_id: string;
+  created_at?: string;
+  source_cutoff?: string;
+  source_versions?: Record<string, string>;
+  model_version?: string;
+};
 type ReleaseManifest = {
   release_id: string;
   created_at: string;
@@ -43,11 +49,24 @@ async function objectJson<T>(bucket: R2Bucket, key: string): Promise<T> {
 async function releaseContext(env: Env) {
   const pointerKey = env.RELEASE_POINTER === "candidate.json" ? "candidate.json" : "current.json";
   const pointer = await objectJson<ReleasePointer>(env.DATA, pointerKey);
-  if (!/^[A-Za-z0-9._-]{1,80}$/.test(pointer.release_id)) {
+  if (typeof pointer.release_id !== "string" || !/^[A-Za-z0-9._-]{1,80}$/.test(pointer.release_id)) {
     throw new Error("invalid release pointer");
   }
   const prefix = `releases/${pointer.release_id}`;
-  const manifest = await objectJson<ReleaseManifest>(env.DATA, `${prefix}/manifest.json`);
+  const manifest = typeof pointer.created_at === "string"
+    ? {
+        release_id: pointer.release_id,
+        created_at: pointer.created_at,
+        ...(typeof pointer.source_cutoff === "string" ? { source_cutoff: pointer.source_cutoff } : {}),
+        ...(pointer.source_versions
+          && typeof pointer.source_versions === "object"
+          && !Array.isArray(pointer.source_versions)
+          && Object.values(pointer.source_versions).every((value) => typeof value === "string")
+          ? { source_versions: pointer.source_versions }
+          : {}),
+        ...(typeof pointer.model_version === "string" ? { model_version: pointer.model_version } : {}),
+      }
+    : await objectJson<ReleaseManifest>(env.DATA, `${prefix}/manifest.json`);
   return { prefix, manifest };
 }
 

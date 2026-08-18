@@ -5,10 +5,24 @@ function incoming(url: string) {
   return new Request(url) as Parameters<typeof worker.fetch>[0];
 }
 
-function environment(options: { rateAllowed?: boolean; releasePointer?: string } = {}) {
+function environment(options: {
+  rateAllowed?: boolean;
+  releasePointer?: string;
+  pointerSummary?: boolean;
+  onRead?: (key: string) => void;
+} = {}) {
+  const pointer = {
+    release_id: "release-test",
+    ...(options.pointerSummary === false ? {} : {
+      created_at: "2026-08-12T00:00:00Z",
+      source_cutoff: "2026-07-01",
+      source_versions: { appointments: "sha256:test" },
+      model_version: "seasonal-naive-v1",
+    }),
+  };
   const objects: Record<string, unknown> = {
-    "current.json": { release_id: "release-test" },
-    "candidate.json": { release_id: "release-test" },
+    "current.json": pointer,
+    "candidate.json": pointer,
     "releases/release-test/manifest.json": {
       release_id: "release-test",
       created_at: "2026-08-12T00:00:00Z",
@@ -20,6 +34,7 @@ function environment(options: { rateAllowed?: boolean; releasePointer?: string }
     RELEASE_POINTER: options.releasePointer ?? "current.json",
     DATA: {
       async get(key: string) {
+        options.onRead?.(key);
         const value = objects[key];
         if (!value) return null;
         return { body: new Response(JSON.stringify(value)).body };
@@ -36,9 +51,10 @@ function environment(options: { rateAllowed?: boolean; releasePointer?: string }
 
 describe("v1 API envelope", () => {
   it("returns release metadata and explicit limitations", async () => {
+    const reads: string[] = [];
     const response = await worker.fetch(
       incoming("https://planner.test/api/v1/meta"),
-      environment(),
+      environment({ onRead: (key) => reads.push(key) }),
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
@@ -47,6 +63,17 @@ describe("v1 API envelope", () => {
       classification: "derived",
       limitations: ["Public data only", "No observed capacity"],
     });
+    expect(reads).toEqual(["current.json"]);
+  });
+
+  it("falls back to the manifest for legacy minimal pointers", async () => {
+    const reads: string[] = [];
+    const response = await worker.fetch(
+      incoming("https://planner.test/api/v1/meta"),
+      environment({ pointerSummary: false, onRead: (key) => reads.push(key) }),
+    );
+    expect(response.status).toBe(200);
+    expect(reads).toEqual(["current.json", "releases/release-test/manifest.json"]);
   });
 
   it("reads the isolated candidate pointer when configured", async () => {
