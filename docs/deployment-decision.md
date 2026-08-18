@@ -4,9 +4,14 @@
 
 GP Access Planner release `2026-08-13.1` became the active public release on
 2026-08-18. `current.json` selects that immutable release and Worker version
-`cdd1f939-a2c6-473c-b37b-d56de9bf5a97` serves
+`67319dc9-4010-46c0-b826-ef55cc44403e` serves
 `https://gp-access-planner.gp-access-planner.workers.dev`. The repository name remains
 unchanged.
+
+The production pointer carries only the bounded release summary needed by the Worker.
+The immutable manifest remains the artifact audit index and is never returned by the
+public metadata route. Legacy minimal pointers retain a manifest fallback during
+transition.
 
 ## Approved architecture and completed promotion
 
