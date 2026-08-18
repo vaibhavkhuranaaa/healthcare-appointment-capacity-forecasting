@@ -22,8 +22,9 @@ evidence. It is no longer the GP Access Planner production release.
 | Candidate R2 upload | Passed; 404,772/404,772 local and remote files checksum-matched with zero differences |
 | Candidate live smoke test | Passed at `https://gp-access-planner-candidate.gp-access-planner.workers.dev` for metadata, 104 geographies, forecasts, observed context, scenarios, and all four product routes |
 | Production pointer promotion | Passed on 2026-08-18; `current.json` selects `2026-08-13.1` |
-| Production Worker | Deployed from merged commit `b7b372a` as version `cdd1f939-a2c6-473c-b37b-d56de9bf5a97` at `https://gp-access-planner.gp-access-planner.workers.dev` |
+| Production Worker | Current version `67319dc9-4010-46c0-b826-ef55cc44403e`, deployed from merged commit `ffca218` at `https://gp-access-planner.gp-access-planner.workers.dev` |
 | Production live smoke test | Passed for metadata, 104 geographies, ordered forecasts, observed context, synthetic scenarios, and all four product routes |
+| Metadata response bound | Passed; `/api/v1/meta` reduced from 31,107,910 bytes to 6,134 bytes (99.98%) by reading the bounded pointer instead of the artifact manifest |
 
 The isolated candidate Worker continues to read `candidate.json`; production reads
 `current.json`. Both pointers select the same immutable `2026-08-13.1` release. The
