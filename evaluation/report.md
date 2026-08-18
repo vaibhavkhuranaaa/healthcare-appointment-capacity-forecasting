@@ -31,6 +31,7 @@ approved champion. Its 28-day WAPE is below the 15% active-model ceiling. Its no
 80% interval under-covered at 55.09%; the p10–p90 band must therefore be presented as
 an indicative uncertainty range, not a calibrated probability guarantee.
 
-Local candidate `2026-08-12.2` contains 32,871,791 source rows, 404,458 immutable
-artifacts, and 104 finite ordered 28-day forecast files. It has not been uploaded or
-promoted. The existing v0 remains active pending deployment approval.
+Corrected release `2026-08-13.1` contains 32,871,791 source rows, 404,771 manifest
+artifacts plus its manifest, and 104 finite ordered 28-day forecast files. Its remote
+checksum comparison passed for all 404,772 files. Candidate and production live smoke
+tests passed, and `current.json` promoted it to production on 2026-08-18.

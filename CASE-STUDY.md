@@ -31,5 +31,6 @@ It offers planning evidence, not a measurement of NHS utilisation and not clinic
 
 ## Status
 
-Replacement implementation and local verification are in progress. The existing v0
-remains served until the candidate passes private evaluation and receives deployment approval.
+Release `2026-08-13.1` passed private evaluation, immutable upload verification,
+isolated candidate smoke tests, and production smoke tests. It is live at
+`https://gp-access-planner.gp-access-planner.workers.dev`.
