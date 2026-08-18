@@ -9,6 +9,7 @@ function environment(options: {
   rateAllowed?: boolean;
   releasePointer?: string;
   pointerSummary?: boolean;
+  sourceSha?: string;
   onRead?: (key: string) => void;
 } = {}) {
   const pointer = {
@@ -32,6 +33,7 @@ function environment(options: {
   };
   return {
     RELEASE_POINTER: options.releasePointer ?? "current.json",
+    SOURCE_SHA: options.sourceSha ?? "0123456789abcdef0123456789abcdef01234567",
     DATA: {
       async get(key: string) {
         options.onRead?.(key);
@@ -50,6 +52,30 @@ function environment(options: {
 }
 
 describe("v1 API envelope", () => {
+  it("reports the exact deployed source revision without reading release data", async () => {
+    const reads: string[] = [];
+    const response = await worker.fetch(
+      incoming("https://planner.test/api/release"),
+      environment({ onRead: (key) => reads.push(key) }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({
+      status: "ok",
+      source_sha: "0123456789abcdef0123456789abcdef01234567",
+    });
+    expect(reads).toEqual([]);
+  });
+
+  it("refuses to claim an invalid deployed source revision", async () => {
+    const response = await worker.fetch(
+      incoming("https://planner.test/api/release"),
+      environment({ sourceSha: "unpublished" }),
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: "release_identity_unavailable" });
+  });
+
   it("returns release metadata and explicit limitations", async () => {
     const reads: string[] = [];
     const response = await worker.fetch(

@@ -35,9 +35,11 @@ jobs:
         run: |
           npx wrangler r2 object get gp-access-planner-releases/candidate.json --file=/tmp/candidate.json --remote
           jq -e --arg release "$RELEASE_ID" '.release_id == $release' /tmp/candidate.json
-      - run: npx wrangler deploy --env candidate --config worker/wrangler.jsonc
+      - run: npx wrangler deploy --env candidate --config worker/wrangler.jsonc --var SOURCE_SHA:"$GITHUB_SHA"
       - name: Smoke candidate
         run: |
+          curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/release" --output /tmp/release.json
+          jq -e --arg source_sha "$GITHUB_SHA" '.status == "ok" and .source_sha == $source_sha' /tmp/release.json
           curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/meta" --output /tmp/meta.json
           jq -e --arg release "$RELEASE_ID" '.release_id == $release and .classification == "derived"' /tmp/meta.json
           curl --fail --retry 6 --retry-all-errors "$CANDIDATE_URL/api/v1/geographies?level=sub_icb" --output /tmp/geographies.json

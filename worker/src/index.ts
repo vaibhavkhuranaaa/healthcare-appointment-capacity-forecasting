@@ -114,6 +114,12 @@ function safeToken(value: string | null, pattern = /^[A-Za-z0-9._-]{1,80}$/) {
 
 async function api(request: Request, env: Env) {
   const url = new URL(request.url);
+  if (request.method === "GET" && url.pathname === "/api/release") {
+    if (!/^[0-9a-f]{40}$/.test(env.SOURCE_SHA)) {
+      return error("release_identity_unavailable", "The deployed source revision is unavailable.", 503);
+    }
+    return json({ status: "ok", source_sha: env.SOURCE_SHA }, 200, "no-store");
+  }
   if (url.search.length > 1000) return error("query_too_large", "Query string is too large.", 414);
   const rate = await env.RATE_LIMITER.limit({ key: request.headers.get("cf-connecting-ip") ?? "local" });
   if (!rate.success) return error("rate_limited", "Request limit exceeded. Try again shortly.", 429);

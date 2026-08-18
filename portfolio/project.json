@@ -2,16 +2,302 @@
   "version": 2,
   "slug": "gp-access-planner",
   "title": "GP Access Planner",
-  "status": "production",
-  "currentPublicRelease": "2026-08-13.1",
-  "source": {
-    "dataBoundary": "Public statistical releases; no PHI, operational slots, rosters, or clinical advice.",
-    "classification": "Non-commercial use"
+  "summary": "A public-data planning product that forecasts recorded general-practice appointments across England while keeping observed access signals and hypothetical capacity explicitly separate.",
+  "outcome": "Delivered a source-traceable 7, 14, and 28-day planning surface for 104 sub-ICBs, backed by 32.9 million validated source rows, rolling-origin evaluation, immutable releases, and a live edge API.",
+  "industries": ["Healthcare", "Public sector"],
+  "categories": ["AI/ML", "Analytics", "Data Engineering", "Cloud"],
+  "stack": ["Python", "PostgreSQL", "dbt", "scikit-learn", "LightGBM", "CatBoost", "Next.js", "TypeScript", "Cloudflare Workers", "Cloudflare R2"],
+  "githubUrl": "https://github.com/vaibhavkhuranaaa/healthcare-appointment-capacity-forecasting",
+  "liveUrl": "https://gp-access-planner.gp-access-planner.workers.dev",
+  "deployment": {
+    "provider": "Cloudflare Workers and R2",
+    "status": "live",
+    "runtime": "Static Next.js assets and a TypeScript Worker at the edge",
+    "exposure": "anonymous",
+    "productionClaim": false,
+    "verifiedAt": "2026-08-18T05:34:53Z",
+    "expiresAt": null,
+    "evidenceRefs": ["deployment.live", "release.integrity"]
+  },
+  "metrics": [
+    "32,871,791 source rows loaded with exact-count reconciliation",
+    "104 sub-ICBs approved for 7, 14, and 28-day forecasts",
+    "10.96% 28-day WAPE and 0.580 MASE for the approved seasonal-naive champion",
+    "404,772 immutable release files checksum-matched locally and in R2",
+    "99.98% smaller metadata response after bounding the serving pointer"
+  ],
+  "stages": [
+    "Checksum and archive validation for selected public releases",
+    "Typed ingestion into immutable PostgreSQL source tables",
+    "dbt source-native and derived model construction",
+    "Rolling-origin baseline and challenger evaluation",
+    "Immutable serving-artifact export and R2 verification",
+    "Isolated candidate smoke test and pointer-only production promotion",
+    "Static planning interface and bounded edge API"
+  ],
+  "architecture": [
+    "A private build plane validates public source archives and loads PostgreSQL without exposing source credentials to the public runtime.",
+    "dbt separates publisher-grain observations from derived marts; forecasting uses only publication-time-safe features.",
+    "Python evaluates seasonal naive, Elastic Net, LightGBM, and CatBoost across twelve rolling origins and three horizons.",
+    "Approved releases are exported as immutable, checksummed, paged JSON artifacts and uploaded to Cloudflare R2.",
+    "A Cloudflare Worker reads a bounded release pointer, applies request limits, and serves versioned envelopes to a static Next.js interface.",
+    "Candidate and production Workers use separate pointers; promotion changes only current.json and preserves rollback artifacts."
+  ],
+  "evaluation": [
+    "Twelve rolling origins compare one seasonal baseline and three challengers at 7, 14, and 28 days.",
+    "A challenger must improve WAPE by at least 5% at every horizon, achieve MASE below 1, and avoid material geography regressions.",
+    "Seasonal naive remained champion with 5.60%, 9.10%, and 10.96% WAPE at 7, 14, and 28 days.",
+    "The 28-day interval covered 55.09% against a nominal 80% target, so the interface labels the band indicative rather than calibrated.",
+    "Release acceptance also checks finite ordered forecasts, exact row reconciliation, checksums, API contracts, and live routes."
+  ],
+  "operationalTradeoffs": [
+    "Precomputed forecasts and bounded artifacts remove database credentials and model inference from the public request path, at the cost of batch freshness.",
+    "Publisher-grain rows remain traceable, but paged serving indexes add many small immutable objects to each release.",
+    "Seasonal naive is less sophisticated than the challengers, but it was the only model that passed every declared promotion gate.",
+    "The product forecasts recorded appointments, not slots, utilisation, workload, cancellations, or actual available capacity.",
+    "The anonymous portfolio deployment has rate limiting and release rollback but no clinical availability objective."
+  ],
+  "disclaimer": "This public-data portfolio product supports review of recorded appointment pressure only. It contains no PHI, operational slot data, rosters, free text, or clinical advice, and it makes no claim to measure NHS capacity or utilisation.",
+  "dataDisclosure": {
+    "source": "Selected public statistical releases from NHS England and related public publishers covering appointments, telephony, online consultations, registered populations, workforce, geography, patient experience, deprivation, and respiratory surveillance.",
+    "license": "Source datasets remain subject to their respective published terms and attribution requirements; this project uses them for a non-commercial portfolio demonstration and implies no NHS endorsement.",
+    "classification": "public",
+    "permittedUse": "Non-commercial portfolio review, reproducibility inspection, and planning-method demonstration within each source publisher's terms.",
+    "includedFields": [
+      "Publisher-grain public appointment and access-context measures",
+      "Public geography codes and aggregate population or workforce measures",
+      "Derived rates, reconciliations, evaluation metrics, and approved forecasts",
+      "Visitor-entered hypothetical weekday schedules processed without persistence"
+    ],
+    "excludedFields": [
+      "Protected health information, direct identifiers, free text, and patient records",
+      "Operational slots, staff rosters, cancellations, workload, and utilisation",
+      "Private source archives, checksums, acquisition records, and database credentials",
+      "Unapproved model outputs and private build-plane state"
+    ],
+    "deployedArtifactContents": [
+      "Static Next.js application assets",
+      "TypeScript Cloudflare Worker and deterministic scenario logic",
+      "Versioned public-data summaries, paged source rows, context, and approved forecasts",
+      "A bounded release pointer and immutable checksum-verified release objects"
+    ]
   },
   "evidence": [
-    "docs/architecture.md",
-    "docs/data-contract.md",
-    "docs/metric-contract.md",
-    "evaluation/report.md"
-  ]
+    {
+      "id": "evaluation.model-gate",
+      "kind": "evaluation",
+      "claim": "Seasonal naive passed the declared active-model ceiling across 104 eligible sub-ICBs while every challenger failed at least one promotion gate.",
+      "source": "evaluation/report.md",
+      "method": "Twelve rolling origins at 7, 14, and 28 days with WAPE, MASE, interval coverage, and geography regression gates.",
+      "result": "5.60% / 9.10% / 10.96% WAPE; 0.580 28-day MASE",
+      "scope": "104 sub-ICBs with twelve months of usable history and at least 90% published GPAD population coverage",
+      "environment": "Private PostgreSQL build plane with locked Python dependencies",
+      "classification": "aggregate public-data evaluation",
+      "execution": "deterministic",
+      "caveat": "The nominal 80% prediction interval under-covered at 55.09% and is labelled indicative."
+    },
+    {
+      "id": "data.reconciliation",
+      "kind": "test",
+      "claim": "The private snapshot loaded 32,871,791 exact source rows and the dbt build completed every declared node and test.",
+      "source": "docs/deployment-evidence.md",
+      "method": "Checksum and ZIP-CRC validation, typed ingestion, exact row-count reconciliation, and dbt build over PostgreSQL 17.",
+      "result": "32,871,791 rows; 17/17 dbt nodes and tests passed",
+      "scope": "29 analytical resources selected for release 2026-08-13.1",
+      "environment": "Private PostgreSQL 17 build plane",
+      "classification": "public source data with private acquisition metadata",
+      "execution": "integration",
+      "caveat": "Source archives and acquisition records are intentionally excluded from Git."
+    },
+    {
+      "id": "release.integrity",
+      "kind": "deployment",
+      "claim": "The corrected immutable release matched every local and remote object before production promotion.",
+      "source": "docs/deployment-evidence.md",
+      "method": "Manifest validation followed by immutable rclone copy and checksum comparison before writing the candidate pointer.",
+      "result": "404,772 of 404,772 files checksum-matched with zero differences",
+      "scope": "Cloudflare R2 release 2026-08-13.1",
+      "observedAt": "2026-08-18T05:34:53Z",
+      "environment": "Cloudflare R2",
+      "classification": "immutable public serving release",
+      "execution": "live",
+      "caveat": "The large object count is the cost of bounded publisher-grain exploration without a public database."
+    },
+    {
+      "id": "deployment.live",
+      "kind": "deployment",
+      "claim": "The anonymous Worker serves the approved release and all product routes after candidate isolation and pointer-only promotion.",
+      "source": "https://gp-access-planner.gp-access-planner.workers.dev/api/v1/meta",
+      "method": "Live HTTPS smoke checks over release metadata, 104 geographies, forecasts, observed context, synthetic scenarios, and four product routes.",
+      "result": true,
+      "scope": "Cloudflare production Worker and release 2026-08-13.1",
+      "observedAt": "2026-08-18T05:34:53Z",
+      "environment": "Cloudflare Workers",
+      "classification": "anonymous public-data portfolio deployment",
+      "execution": "live",
+      "caveat": "The deployment is a planning demonstration with no clinical availability objective."
+    },
+    {
+      "id": "api.metadata-bound",
+      "kind": "benchmark",
+      "claim": "The release metadata route reads a bounded pointer instead of the full artifact manifest.",
+      "source": "docs/deployment-evidence.md",
+      "method": "Compared production response bytes before and after embedding the serving summary in the release pointer.",
+      "result": "31,107,910 bytes reduced to 6,134 bytes (99.98%)",
+      "scope": "GET /api/v1/meta",
+      "environment": "Cloudflare Workers and R2",
+      "classification": "public API performance",
+      "execution": "live",
+      "caveat": "This is a response-size comparison, not a full latency or load benchmark."
+    },
+    {
+      "id": "api.boundaries",
+      "kind": "security",
+      "claim": "The public serving path has no PostgreSQL credentials, validates bounded query tokens, rate-limits API traffic, rejects cross-origin scenarios, and does not persist visitor inputs.",
+      "source": "worker/src/index.ts",
+      "method": "Worker contract review and Vitest coverage of release selection, invalid cursors, rate limiting, scenario validation, and error responses.",
+      "result": true,
+      "scope": "Public Worker API and deterministic scenario endpoint",
+      "execution": "deterministic",
+      "caveat": "Anonymous rate limiting and input validation do not constitute a clinical security accreditation."
+    },
+    {
+      "id": "data.boundary",
+      "kind": "disclosure",
+      "claim": "The repository and deployed release exclude PHI, operational slot data, rosters, free text, private acquisition metadata, and database credentials.",
+      "source": "docs/data-contract.md",
+      "method": "Explicit data contract, public-row sanitisation test, ignore rules, and release-content review.",
+      "result": true,
+      "scope": "Public Git repository, Worker assets, and R2 serving artifacts",
+      "classification": "public statistical data only",
+      "execution": "integration",
+      "caveat": "Publisher nulls and suppression markers are preserved and must be interpreted with source documentation."
+    },
+    {
+      "id": "ci.quality",
+      "kind": "test",
+      "claim": "The release branch is checked across Python, dbt, TypeScript, Worker runtime, static build, and Worker bundle boundaries.",
+      "source": ".github/workflows/quality.yml",
+      "method": "Locked dependency install, migration and fixture load, dbt build, formatting, lint, types, tests, static build, Worker dry run, and whitespace check.",
+      "result": true,
+      "scope": "Default-branch release candidate",
+      "environment": "GitHub-hosted Linux with PostgreSQL 17, Python 3.12, and Node.js 24",
+      "execution": "integration",
+      "caveat": "The CI fixture validates contracts and build reproducibility; full public-source acquisition remains in the private build plane."
+    }
+  ],
+  "story": {
+    "recruiterSummary": "Public primary-care data can describe recorded access pressure, but it cannot reveal actual available capacity. GP Access Planner turns that limitation into the product contract: observed appointments and access signals stay separate, forecasts are promoted only through named gates, and visitor-entered capacity remains clearly synthetic. Every headline claim traces to evaluation, release, or live-deployment evidence.",
+    "technicalNarrative": "A private build plane checksum-validates selected public releases, preserves publisher grain in PostgreSQL, and uses dbt to separate source-native observations from derived marts. Python evaluates seasonal naive, Elastic Net, LightGBM, and CatBoost over twelve rolling origins. The baseline remains champion because no challenger passed every horizon and geography gate. The approved snapshot is exported as immutable paged artifacts, checksum-matched into R2, exercised through an isolated candidate Worker, and promoted by changing one bounded pointer. A static Next.js interface consumes versioned API envelopes; scenarios run as deterministic, non-persistent calculations at the edge.",
+    "scalabilityRoadmap": [
+      "Calibrate forecast intervals by geography or pooled cohort before presenting them as probabilistic coverage rather than indicative ranges.",
+      "Add automated source-freshness monitoring and a documented release service-level objective before increasing operational reliance.",
+      "Measure API latency, cache hit rate, and R2 request cost under representative concurrent browsing before changing the paged artifact design.",
+      "Keep capacity schedules synthetic unless governed operational slot and roster data become available with explicit authorization and new disclosure controls."
+    ],
+    "executiveSummary": "The live product gives planners a bounded view of where recorded appointment pressure may merit review over the next four weeks. It covers 104 sub-ICBs and keeps context, forecasts, and hypothetical capacity in distinct lanes. The approved baseline remains below the 15% 28-day WAPE ceiling, but interval under-coverage and the absence of operational capacity data are explicit decision limits.",
+    "intendedUser": "A primary-care planning analyst, healthcare analytics reviewer, or hiring manager assessing data contracts, forecast governance, and public-cloud delivery.",
+    "example": {
+      "title": "Review four-week recorded appointment pressure without claiming capacity",
+      "steps": [
+        "Select a sub-ICB and inspect the 7, 14, or 28-day recorded-appointment forecast",
+        "Read telephone, online, workforce, population, experience, deprivation, and respiratory context as separate signals",
+        "Check source coverage, freshness, model version, forecast status, and limitations in the API envelope",
+        "Enter a hypothetical weekday schedule in Capacity Lab and compare it with forecast demand",
+        "Treat the scenario as synthetic planning evidence, not observed slots, utilisation, workload, or clinical advice"
+      ]
+    },
+    "technologyDecisions": [
+      {
+        "technology": "Seasonal-naive champion with gated challengers",
+        "rationale": "A named baseline makes improvement claims testable and remained the only model to pass every declared horizon and geography gate.",
+        "alternative": "Promote LightGBM or CatBoost on aggregate performance alone",
+        "tradeoff": "The simpler model gives up sophistication but avoids promoting a challenger with short-horizon or geography regressions."
+      },
+      {
+        "technology": "Immutable R2 artifacts and pointer promotion",
+        "rationale": "Precomputed, checksum-verified objects provide traceability, bounded reads, candidate isolation, and rollback without public database access.",
+        "alternative": "Serve PostgreSQL queries and live model inference",
+        "tradeoff": "Batch releases are less fresh and contain many small objects, but the public runtime holds no database credentials."
+      },
+      {
+        "technology": "Static Next.js interface with a Worker API",
+        "rationale": "Static product routes keep deployment small while the Worker supplies versioned data envelopes, request limits, and deterministic scenarios.",
+        "alternative": "Run a stateful full-stack application server",
+        "tradeoff": "The surface cannot support persistent user accounts or saved scenarios, which matches the anonymous portfolio boundary."
+      },
+      {
+        "technology": "Publisher-grain source preservation",
+        "rationale": "Keeping observed rows at their lowest published grain makes displayed summaries traceable and preserves source nulls and suppression markers.",
+        "alternative": "Publish only aggregate dashboards",
+        "tradeoff": "Traceability increases artifact volume and requires bounded paging and serving indexes."
+      }
+    ],
+    "evidence": [
+      {
+        "value": "10.96%",
+        "label": "28-day WAPE",
+        "context": "Approved seasonal-naive forecast across 104 eligible sub-ICBs and twelve rolling origins.",
+        "method": "Weighted absolute percentage error at the longest declared planning horizon.",
+        "meaning": "Aggregate error remained below the 15% active-model ceiling.",
+        "threshold": "A geography above 15% is held to the prior forecast or historical-only mode.",
+        "interpretation": "Evidence for a bounded planning forecast, not a measurement of actual capacity.",
+        "evidenceRefs": ["evaluation.model-gate"]
+      },
+      {
+        "value": "32.9M",
+        "label": "Validated source rows",
+        "context": "Exact loaded row count across 29 analytical resources in the private build snapshot.",
+        "method": "Checksums, archive CRCs, typed ingestion, and row-count reconciliation before dbt modelling.",
+        "meaning": "The analysis was built from a reconciled public-data snapshot rather than a small dashboard extract.",
+        "interpretation": "Acquisition archives stay private even though the selected source statistics are public.",
+        "evidenceRefs": ["data.reconciliation"]
+      },
+      {
+        "value": "404,772 / 404,772",
+        "label": "Checksum-matched release files",
+        "context": "Every local object in release 2026-08-13.1 matched its remote R2 counterpart.",
+        "method": "Immutable bulk copy followed by manifest-driven remote checksum comparison.",
+        "meaning": "The promoted serving release is byte-accounted and rollback-ready.",
+        "interpretation": "Integrity evidence does not replace availability or disaster-recovery objectives.",
+        "evidenceRefs": ["release.integrity"]
+      },
+      {
+        "value": "99.98% smaller",
+        "label": "Bounded metadata response",
+        "context": "The production metadata response fell from 31,107,910 bytes to 6,134 bytes.",
+        "method": "Moved serving metadata into the bounded release pointer while retaining a legacy manifest fallback.",
+        "meaning": "The most common API call no longer transfers or parses the full artifact inventory.",
+        "interpretation": "A focused response-size optimization; load and latency testing remain future work.",
+        "evidenceRefs": ["api.metadata-bound"]
+      }
+    ],
+    "limitations": [
+      "Recorded appointments are not available slots, workload, utilisation, cancellations, or actual capacity.",
+      "The nominal 80% forecast interval achieved 55.09% coverage and is presented only as an indicative range.",
+      "No challenger passed every promotion gate, so the approved forecast intentionally remains seasonal naive.",
+      "The public snapshot has batch freshness and does not stream operational NHS data.",
+      "Synthetic capacity scenarios do not model skill mix, appointment duration, absence, estates, or local booking rules.",
+      "The anonymous deployment has no clinical availability objective and must not be used for patient-level or clinical decisions."
+    ]
+  },
+  "resume": {
+    "bulletCandidates": [
+      {
+        "role": "Senior Healthcare Analyst",
+        "bullet": "Built a public-data GP access planning product across 104 sub-ICBs, reconciling 32.9 million source rows and governing 7, 14, and 28-day forecasts through twelve rolling origins and explicit WAPE, MASE, coverage, and geography gates.",
+        "evidenceRefs": ["data.reconciliation", "evaluation.model-gate"]
+      },
+      {
+        "role": "Analytics Engineer",
+        "bullet": "Designed a PostgreSQL and dbt build plane that preserves publisher grain, separates observed and derived measures, and passed 17 of 17 declared nodes and tests before exporting a checksum-verified immutable release.",
+        "evidenceRefs": ["data.reconciliation", "release.integrity", "data.boundary"]
+      },
+      {
+        "role": "Data Product Engineer",
+        "bullet": "Delivered a static Next.js and Cloudflare Worker planning surface with bounded versioned APIs, deterministic non-persistent scenarios, candidate isolation, pointer-only promotion, and a 99.98% reduction in release-metadata response size.",
+        "evidenceRefs": ["api.boundaries", "api.metadata-bound", "deployment.live"]
+      }
+    ]
+  }
 }

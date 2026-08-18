@@ -4,7 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-12",
   "compatibility_flags": ["nodejs_compat"],
-  "vars": { "RELEASE_POINTER": "current.json" },
+  "vars": {
+    "RELEASE_POINTER": "current.json",
+    "SOURCE_SHA": "unpublished"
+  },
   "assets": {
     "directory": "../out",
     "binding": "ASSETS",
@@ -23,7 +26,10 @@
   "env": {
     "candidate": {
       "name": "gp-access-planner-candidate",
-      "vars": { "RELEASE_POINTER": "candidate.json" },
+      "vars": {
+        "RELEASE_POINTER": "candidate.json",
+        "SOURCE_SHA": "unpublished"
+      },
       "r2_buckets": [
         { "binding": "DATA", "bucket_name": "gp-access-planner-releases" }
       ],
