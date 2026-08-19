@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_gpad_daily
+    columns:
+      - name: sub_icb_code
+        tests: [not_null]
+      - name: appointment_date
+        tests: [not_null]
+      - name: appointment_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: [Attended, DNA, Unknown]
+      - name: appointment_count
+        tests: [not_null]
+      - name: source_native_key
+        tests: [not_null, unique]
+  - name: daily_recorded_activity
+    columns:
+      - name: sub_icb_code
+        tests: [not_null]
+      - name: appointment_date
+        tests: [not_null]
+      - name: recorded_appointments
+        tests: [not_null]
+      - name: unknown_status_appointments
+        description: Publisher-labelled unknown status retained separately; never interpreted as cancellation.

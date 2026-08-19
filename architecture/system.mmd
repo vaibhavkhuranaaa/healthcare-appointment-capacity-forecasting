@@ -1,0 +1,12 @@
+flowchart LR
+  A["Public statistical releases"] --> B["Private source archives\nchecksums and metadata"]
+  B --> C["Typed Python ingestion\nCRC, schema, row proof"]
+  C --> D[("PostgreSQL\nimmutable raw rows")]
+  D --> E["dbt Core\nsource-native contracts"]
+  E --> F["Derived marts\npublication-safe features"]
+  F --> G["Four-model evaluation\n12+ rolling origins"]
+  G --> H["Immutable release artifacts\nsource, forecast, context"]
+  H --> I[("Cloudflare R2\ncurrent and previous")]
+  I --> J["Cloudflare Worker\nbounded v1 API"]
+  J --> K["Static Next.js product\nPlan, Data, Capacity Lab, Methods"]
+  L["Approval-gated current.json"] --> I

@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: source_row
+        columns:
+          - name: dataset_id
+            tests: [not_null]
+          - name: source_hash
+            tests: [not_null]
+          - name: source_member
+            tests: [not_null]
+          - name: row_number
+            tests: [not_null]
+          - name: row_data
+            tests: [not_null]

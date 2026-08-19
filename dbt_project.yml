@@ -1,0 +1,12 @@
+name: gp_access_planner
+version: 1.0.0
+config-version: 2
+profile: gp_access_planner
+model-paths: ["models"]
+clean-targets: ["target", "dbt_packages"]
+models:
+  gp_access_planner:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "status": "enabled",
+  "provider": "Cloudflare Workers and R2",
+  "workflow": ".github/workflows/promote-release.yml",
+  "deploymentTarget": "https://gp-access-planner.gp-access-planner.workers.dev",
+  "publicProject": true,
+  "publicSurface": "public statistical data with synthetic capacity scenarios",
+  "evidence": "evaluation/report.md",
+  "verification": {
+    "url": "https://gp-access-planner.gp-access-planner.workers.dev/api/release",
+    "sourceShaField": "source_sha"
+  },
+  "paidResource": false,
+  "costApprovalRequired": true,
+  "approvalGates": ["deployment", "public release"]
+}
